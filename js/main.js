@@ -250,4 +250,80 @@
         });
     }
 
+    /* ── 9. DRAG-TO-SCROLL (Program Slider + Program Tabs) ── */
+    function addDragScroll(el, isSlider) {
+        if (!el) return;
+
+        var isDown   = false;
+        var startX   = 0;
+        var scrollLeft = 0;
+        var hasDragged = false;
+        var DRAG_THRESHOLD = 5; // px — below this it's a click, not a drag
+
+        el.style.cursor = 'grab';
+        el.style.userSelect = 'none';
+
+        function onDown(e) {
+            isDown    = true;
+            hasDragged = false;
+            el.style.cursor = 'grabbing';
+            startX    = (e.pageX || (e.touches && e.touches[0].pageX)) - el.offsetLeft;
+            scrollLeft = el.scrollLeft;
+        }
+
+        function onMove(e) {
+            if (!isDown) return;
+            var pageX = e.pageX || (e.touches && e.touches[0].pageX);
+            var x     = pageX - el.offsetLeft;
+            var walk  = x - startX;
+
+            if (Math.abs(walk) > DRAG_THRESHOLD) {
+                hasDragged = true;
+                if (e.cancelable) e.preventDefault();
+            }
+
+            if (isSlider) {
+                // Slider: update via the existing slider state for smooth snap
+                if (Math.abs(walk) > 40) {
+                    if (walk < 0) window.slidePrograms('next');
+                    else           window.slidePrograms('prev');
+                    isDown = false;
+                }
+            } else {
+                // Plain scroll container (tabs)
+                el.scrollLeft = scrollLeft - walk;
+            }
+        }
+
+        function onUp() {
+            isDown = false;
+            el.style.cursor = 'grab';
+        }
+
+        // Prevent click events firing on child elements after a drag
+        el.addEventListener('click', function (e) {
+            if (hasDragged) e.stopPropagation();
+        }, true);
+
+        // Mouse events
+        el.addEventListener('mousedown',  onDown);
+        el.addEventListener('mousemove',  onMove);
+        el.addEventListener('mouseup',    onUp);
+        el.addEventListener('mouseleave', onUp);
+
+        // Touch events
+        el.addEventListener('touchstart', onDown, { passive: true });
+        el.addEventListener('touchmove',  onMove, { passive: false });
+        el.addEventListener('touchend',   onUp);
+    }
+
+    // Attach drag-scroll to program slider viewport
+    var sliderViewport = document.querySelector('.program-slider-viewport');
+    addDragScroll(sliderViewport, true);
+
+    // Attach drag-scroll to program tabs row
+    var programTabs = document.querySelector('.program-tabs');
+    addDragScroll(programTabs, false);
+
+
 })();
